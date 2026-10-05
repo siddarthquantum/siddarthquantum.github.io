@@ -128,6 +128,14 @@
     <div class="wrap">
       <div class="kicker">sichakra.in · Interview prep</div>
       <h1>Mobile Automation Interview Guide</h1>
+      <!-- Hero Banner -->
+      <div class="mb-8 overflow-hidden rounded-xl shadow-2xl border border-gray-800">
+        <img 
+          src="../../assets/images/hero-banner.png" 
+          alt="Mobile Automation Interview Masterclass: Appium 2.x" 
+          class="w-full h-auto object-cover" 
+        />
+      </div>
       <p class="lede">A practical Appium 2.x brief for SDET and mobile QA interviews: server and driver architecture, W3C capabilities, locator ranking, gestures without TouchAction, hybrid WebViews, and answers interviewers actually want.</p>
       <div class="chips">
         <span class="chip">Appium 2.x</span>
@@ -155,6 +163,17 @@
     </nav>
 
     <h2 id="appium2">1. Appium 2.x architecture</h2>
+    <!-- Appium Architecture Diagram -->
+    <figure class="my-8 flex flex-col items-center">
+      <img 
+        src="../../assets/images/appium-architecture.png" 
+        alt="Appium 2.x Architecture Flow" 
+        class="rounded-lg shadow-lg border border-gray-800 max-h-[480px] w-auto" 
+      />
+      <figcaption class="mt-3 text-sm text-gray-400 text-center">
+        Figure 1: Appium 2.x Client-Server Decoupled Architecture
+      </figcaption>
+    </figure>
     <p>
       Appium is an open-source automation <strong>server</strong> that speaks the <strong>W3C WebDriver</strong> protocol.
       A language client (Java, Python, JavaScript, C#) sends HTTP commands to Appium.
