@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mobile Automation Interview Guide | Appium 2.x | Sichakra</title>
+  <meta name="description" content="Comprehensive Appium 2.x interview preparation for sichakra.in: architecture, W3C Actions, locator strategies, hybrid apps, and top interview questions.">
+  <link rel="canonical" href="https://sichakra.in/interview/mobile-automation/">
+  <style>
+    :root {
+      --bg: #0c1117;
+      --panel: #151c25;
+      --text: #e7eef5;
+      --muted: #93a1b0;
+      --accent: #5eead4;
+      --accent-dim: #2dd4bf33;
+      --border: #273341;
+      --warn: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    a { color: var(--accent); }
+    header {
+      padding: 2.6rem 1.25rem 1.6rem;
+      border-bottom: 1px solid var(--border);
+      background:
+        radial-gradient(900px 280px at 10% -20%, #134e4a55, transparent),
+        linear-gradient(180deg, #12202a, var(--bg));
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    .kicker {
+      color: var(--accent);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-size: .72rem;
+      font-weight: 650;
+    }
+    h1 { margin: .35rem 0 .45rem; font-size: clamp(1.6rem, 3vw, 2.05rem); }
+    h2 {
+      margin-top: 2.6rem;
+      padding-top: .4rem;
+      color: var(--accent);
+      font-size: 1.32rem;
+      border-top: 1px solid var(--border);
+    }
+    h3 { margin-top: 1.5rem; font-size: 1.05rem; }
+    p, li { color: #d4dee7; }
+    .lede { color: var(--muted); max-width: 62ch; }
+    main { padding: 1.4rem 1.25rem 4.5rem; }
+    nav.toc {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.2rem 1.15rem;
+    }
+    nav.toc ol { margin: .4rem 0 0; padding-left: 1.2rem; }
+    nav.toc a { text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .84rem;
+    }
+    code {
+      background: #0a0f14;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .08rem .32rem;
+    }
+    pre {
+      background: #080c11;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+    pre code { background: none; border: 0; padding: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: 1rem 0; }
+    th, td {
+      border: 1px solid var(--border);
+      padding: .55rem .7rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--panel); color: var(--text); }
+    .q {
+      background: var(--panel);
+      border-left: 3px solid var(--accent);
+      padding: .9rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 10px 10px 0;
+    }
+    .q strong { display: block; margin-bottom: .35rem; color: var(--text); }
+    .note {
+      background: var(--accent-dim);
+      border: 1px solid #2dd4bf55;
+      border-radius: 10px;
+      padding: .85rem 1rem;
+      color: #d1fae5;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin: .9rem 0 0; }
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: .2rem .7rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    footer {
+      color: var(--muted);
+      font-size: .85rem;
+      margin-top: 3rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="kicker">sichakra.in · Interview prep</div>
+      <h1>Mobile Automation Interview Guide</h1>
+      <p class="lede">A practical Appium 2.x brief for SDET and mobile QA interviews: server and driver architecture, W3C capabilities, locator ranking, gestures without TouchAction, hybrid WebViews, and answers interviewers actually want.</p>
+      <div class="chips">
+        <span class="chip">Appium 2.x</span>
+        <span class="chip">UiAutomator2 / XCUITest</span>
+        <span class="chip">W3C Actions</span>
+        <span class="chip">Locators</span>
+        <span class="chip">Interview Q&amp;A</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <nav class="toc" aria-label="Table of contents">
+      <strong>Contents</strong>
+      <ol>
+        <li><a href="#appium2">Appium 2.x architecture</a></li>
+        <li><a href="#caps">Capabilities and sessions</a></li>
+        <li><a href="#locators">Locator strategies</a></li>
+        <li><a href="#w3c">W3C Actions and gestures</a></li>
+        <li><a href="#hybrid">Hybrid apps, waits, and flake</a></li>
+        <li><a href="#ci">Devices, parallel, and CI</a></li>
+        <li><a href="#questions">Top interview questions</a></li>
+        <li><a href="#room">How to answer in the room</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="appium2">1. Appium 2.x architecture</h2>
+    <p>
+      Appium is an open-source automation <strong>server</strong> that speaks the <strong>W3C WebDriver</strong> protocol.
+      A language client (Java, Python, JavaScript, C#) sends HTTP commands to Appium.
+      Appium routes them to a <strong>driver</strong>, which talks to the OS automation backend:
+      <strong>UiAutomator2</strong> on Android, <strong>XCUITest</strong> on iOS (WebDriverAgent on the device),
+      and optionally Espresso, Flutter, or a mobile browser.
+    </p>
+    <p>
+      Appium 1.x shipped every driver inside the server. <strong>Appium 2.x splits the core from drivers and plugins</strong>.
+      You install a slim server, then only the drivers you need. Drivers release on their own cadence,
+      the install is smaller, and plugins (images, execute-driver, inspector helpers) compose without forking Appium.
+    </p>
+    <p>That split is the usual follow-up. XCUITest can ship an iOS support fix without waiting for a full Appium core release.</p>
+<pre><code>npm install -g appium
+appium driver install uiautomator2
+appium driver install xcuitest
+appium plugin install images
+appium driver list --installed
+appium --port 4723</code></pre>
+    <table>
+      <thead>
+        <tr>
+          <th>Driver</th>
+          <th>When to use</th>
+          <th>Trade-off</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>UiAutomator2</td>
+          <td>Black-box Android native and hybrid</td>
+          <td>Default choice. No app source. Slower and less animation-aware than Espresso.</td>
+        </tr>
+        <tr>
+          <td>Espresso</td>
+          <td>White-box Android with instrumentation</td>
+          <td>Needs a debug APK. Better idle sync. Weaker for third-party / system UI.</td>
+        </tr>
+        <tr>
+          <td>XCUITest</td>
+          <td>iOS native, hybrid, Safari</td>
+          <td>Xcode, signing, UDID, WebDriverAgent. Version skew is the main setup failure.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">
+      Do not say “Appium automates the app.” Say: client → W3C HTTP → Appium server → driver → UiAutomator2 / WDA → app process.
+      The session id on that path is what every later find/click/screenshot uses.
+    </p>
+
+    <h2 id="caps">2. Capabilities and sessions</h2>
+    <p>
+      JSON Wire Protocol <code>desiredCapabilities</code> is legacy. Appium 2 with current clients uses
+      <strong>W3C capabilities</strong> (<code>alwaysMatch</code> / <code>firstMatch</code>).
+      Standard keys include <code>platformName</code> and <code>browserName</code>.
+      Vendor keys must be prefixed with <code>appium:</code> or they are rejected.
+      Java and Python clients hide the prefix behind option classes.
+    </p>
+<pre><code>UiAutomator2Options opts = new UiAutomator2Options()
+    .setPlatformName("Android")
+    .setAutomationName("UiAutomator2")
+    .setDeviceName("Pixel_7")
+    .setUdid("emulator-5554")
+    .setApp("/path/to/app.apk")
+    .setAppPackage("com.example.app")
+    .setAppActivity(".MainActivity")
+    .setNoReset(true)
+    .setNewCommandTimeout(Duration.ofSeconds(300));
+
+AndroidDriver driver = new AndroidDriver(
+    new URI("http://127.0.0.1:4723").toURL(), opts);</code></pre>
+    <ul>
+      <li><code>noReset</code> keeps app data (logged-in flows). <code>fullReset</code> uninstalls / reinstalls.</li>
+      <li>Android also has a fast-reset path that clears data without a full uninstall.</li>
+      <li><code>autoGrantPermissions</code> on Android vs iOS alert handling (<code>autoAcceptAlerts</code> is blunt).</li>
+      <li><code>newCommandTimeout</code> kills idle sessions. Too low looks like “random session deleted.”</li>
+      <li>Cloud farms add build name, project, network logs, GPS, and device logs as extra caps.</li>
+    </ul>
+    <p>
+      iOS equivalents: <code>XCUITestOptions</code>, <code>bundleId</code> or <code>app</code> (.ipa / .app),
+      <code>udid</code>, <code>wdaLocalPort</code>, xcodeOrgId / signing, and often <code>updatedWDABundleId</code>.
+    </p>
+
+    <h2 id="locators">3. Locator strategies</h2>
+    <p>
+      Rank locators by <strong>stability first, then speed</strong>. Prove them in Appium Inspector against the current XML tree.
+      Never defend XPath as a default.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>Maps to</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Accessibility ID</td>
+          <td>Android <code>content-desc</code>, iOS <code>accessibilityIdentifier</code></td>
+          <td>Best cross-platform contract. Fast. Survives layout refactors if the product team owns the id.</td>
+        </tr>
+        <tr>
+          <td>ID / resource-id</td>
+          <td><code>com.app:id/login_btn</code></td>
+          <td>Excellent on Android. On iOS, name/id mapping is less consistent.</td>
+        </tr>
+        <tr>
+          <td><code>-android uiautomator</code></td>
+          <td><code>new UiSelector().resourceId(...).text("Pay")</code></td>
+          <td>Native Android queries. Prefer over deep XPath. Keep chains short.</td>
+        </tr>
+        <tr>
+          <td><code>-ios predicate string</code></td>
+          <td><code>type == 'XCUIElementTypeButton' AND name == 'Pay'</code></td>
+          <td>Preferred iOS locator after accessibility id.</td>
+        </tr>
+        <tr>
+          <td><code>-ios class chain</code></td>
+          <td><code>**/XCUIElementTypeCell[`name == "Card"`]</code></td>
+          <td>Faster than XPath on iOS. Still a tree walk.</td>
+        </tr>
+        <tr>
+          <td>Class name</td>
+          <td><code>android.widget.Button</code></td>
+          <td>Too coarse unless combined with something unique. Index is fragile.</td>
+        </tr>
+        <tr>
+          <td>XPath</td>
+          <td><code>//android.widget.TextView[@text='Pay']</code></td>
+          <td>Last resort. Slow XML walk. Avoid <code>//*</code> and absolute <code>/hierarchy/...</code> paths.</td>
+        </tr>
+        <tr>
+          <td>Image / OCR plugins</td>
+          <td>Appium Images plugin</td>
+          <td>Canvas, games, or unlabeled icons. Flaky across density, theme, and locale.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      After a WebView context switch, use web locators (CSS first). Native locators do not apply inside <code>WEBVIEW_*</code>.
+    </p>
+<pre><code>driver.findElement(AppiumBy.accessibilityId("login.submit"));
+driver.findElement(AppiumBy.androidUIAutomator(
+    "new UiSelector().resourceId(\"com.example:id/pay\")"));
+driver.findElement(AppiumBy.iOSNsPredicateString(
+    "type == 'XCUIElementTypeButton' AND name == 'Pay'"));</code></pre>
+
+    <h2 id="w3c">4. W3C Actions (TouchAction is dead)</h2>
+    <p>
+      JSONWP <code>TouchAction</code> and <code>MultiTouchAction</code> are deprecated.
+      Interviews expect the <strong>W3C Actions API</strong>: pointer input sources, a sequence of
+      <code>pointerMove</code> / <code>pointerDown</code> / <code>pause</code> / <code>pointerUp</code>, then <code>perform()</code>.
+      Derive coordinates from the viewport or an element rect—not magic pixels from one phone.
+    </p>
+<pre><code>PointerInput finger = new PointerInput(PointerInput.Kind.TOUCH, "finger");
+Sequence swipe = new Sequence(finger, 1);
+Dimension size = driver.manage().window().getSize();
+int startX = size.width / 2;
+int startY = (int) (size.height * 0.80);
+int endY = (int) (size.height * 0.20);
+
+swipe.addAction(finger.createPointerMove(
+    Duration.ZERO, PointerInput.Origin.viewport(), startX, startY));
+swipe.addAction(finger.createPointerDown(PointerInput.MouseButton.LEFT.asArg()));
+swipe.addAction(finger.createPointerMove(
+    Duration.ofMillis(600), PointerInput.Origin.viewport(), startX, endY));
+swipe.addAction(finger.createPointerUp(PointerInput.MouseButton.LEFT.asArg()));
+driver.perform(List.of(swipe));</code></pre>
+    <ul>
+      <li><strong>Tap:</strong> move to center → down → short pause → up.</li>
+      <li><strong>Long press:</strong> same, with a 1–2s pause before up (context menus, drag handles).</li>
+      <li><strong>Swipe / scroll:</strong> duration matters. Too fast = no scroll; too slow = a drag.</li>
+      <li><strong>Pinch / zoom:</strong> two pointer sources in the same <code>perform()</code> list.</li>
+      <li>Also mention driver helpers: Android <code>mobile: swipeGesture</code> / <code>mobile: scrollGesture</code>; iOS <code>mobile: swipe</code> / <code>mobile: scroll</code>.</li>
+    </ul>
+<pre><code>driver.executeScript("mobile: swipeGesture", Map.of(
+    "left", 100, "top", 400, "width", 600, "height", 800,
+    "direction", "up",
+    "percent", 0.75
+));</code></pre>
+
+    <h2 id="hybrid">5. Hybrid apps, waits, and flake control</h2>
+    <p>
+      Hybrid checkout bugs are a favorite panel topic: Inspector shows the button, the test gets
+      <code>NoSuchElementException</code>, and the log never left <code>NATIVE_APP</code>.
+    </p>
+    <ul>
+      <li>Poll <code>driver.getContextHandles()</code> until the expected <code>WEBVIEW_*</code> appears, then <code>context()</code>.</li>
+      <li>Chrome / Chromedriver must match the device WebView. Appium 2 drivers can autodiscover if configured.</li>
+      <li>iOS WebViews need inspectable web content; otherwise the WEBVIEW handle never appears.</li>
+      <li>Prefer explicit waits. Do not mix a large implicit wait with <code>WebDriverWait</code>.</li>
+      <li>Flake is usually animation, keyboard covering the CTA, system dialogs, or a stale hierarchy—not “Appium is random.”</li>
+    </ul>
+<pre><code>new WebDriverWait(driver, Duration.ofSeconds(20)).until(d ->
+    d.getContextHandles().stream().anyMatch(c -> c.contains("WEBVIEW")));
+String webview = driver.getContextHandles().stream()
+    .filter(c -> c.contains("WEBVIEW"))
+    .findFirst()
+    .orElseThrow();
+driver.context(webview);</code></pre>
+
+    <h2 id="ci">6. Devices, parallel execution, and CI</h2>
+    <ul>
+      <li><strong>Emulators / simulators:</strong> cheap PR checks. Weak for OEM skins, real GPS, biometrics, push, and performance.</li>
+      <li><strong>Real devices / farms:</strong> BrowserStack, Sauce Labs, LambdaTest, AWS Device Farm for nightly matrix runs.</li>
+      <li><strong>Parallel:</strong> one session per UDID. Unique <code>systemPort</code> (Android) and <code>wdaLocalPort</code> / <code>mjpegServerPort</code> (iOS). Never share one driver across threads.</li>
+      <li><strong>CI:</strong> build the APK/IPA in the same pipeline, inject caps from secrets, shard by device, attach Appium server log + screenshot + video on failure.</li>
+      <li><strong>Deep links:</strong> <code>am start -a android.intent.action.VIEW -d "myapp://checkout"</code> (or iOS URL schemes) skip long navigations and cut flake.</li>
+    </ul>
+
+    <h2 id="questions">7. Top interview questions</h2>
+
+    <div class="q">
+      <strong>Q1. How does Appium talk to a device?</strong>
+      Client library → W3C WebDriver HTTP → Appium server → platform driver (UiAutomator2 / XCUITest) → OS engine → app. The session id binds later commands to that device.
+    </div>
+    <div class="q">
+      <strong>Q2. What changed in Appium 2.x?</strong>
+      Drivers and plugins are separate packages. Protocol is W3C-first. Vendor caps need the <code>appium:</code> prefix. You must <code>appium driver install</code> instead of assuming everything is bundled.
+    </div>
+    <div class="q">
+      <strong>Q3. Desired capabilities vs W3C options?</strong>
+      JSONWP used a flat desiredCapabilities map. W3C uses alwaysMatch/firstMatch. Java clients wrap this in <code>UiAutomator2Options</code> / <code>XCUITestOptions</code>. Unprefixed vendor keys fail session creation.
+    </div>
+    <div class="q">
+      <strong>Q4. UiAutomator2 vs Espresso vs XCUITest?</strong>
+      UIA2: black-box Android, no source. Espresso: in-process Android, needs instrumentation, better sync. XCUITest: iOS only, WDA on device, signing and UDID pain.
+    </div>
+    <div class="q">
+      <strong>Q5. Which locator do you choose first?</strong>
+      Accessibility ID → resource-id / iOS predicate → class chain or UiSelector → relative XPath. Justify from Inspector XML, not habit.
+    </div>
+    <div class="q">
+      <strong>Q6. Why is XPath disliked on mobile?</strong>
+      Page source is a large XML dump. XPath walks the tree, breaks when wrappers change, and is slower than native selectors—especially <code>//*</code>.
+    </div>
+    <div class="q">
+      <strong>Q7. How do you automate a swipe without TouchAction?</strong>
+      W3C <code>PointerInput</code> sequence with viewport percentages, or <code>driver.executeScript("mobile: swipeGesture", args)</code>. Mention duration. Do not hardcode 500,1500.
+    </div>
+    <div class="q">
+      <strong>Q8. How do you wait for a WebView?</strong>
+      Poll contexts until the WEBVIEW handle exists, then switch. If it never appears: wrong package, Android web debugging disabled, or iOS webview not inspectable.
+    </div>
+    <div class="q">
+      <strong>Q9. Real device vs emulator?</strong>
+      Emulators for fast CI. Real devices / farms for OEM WebView, permissions, biometrics, and performance. Strong answer: both, with different jobs.
+    </div>
+    <div class="q">
+      <strong>Q10. noReset vs fullReset?</strong>
+      noReset keeps state (stay logged in). fullReset reinstalls. Wrong choice is a common “works on my machine” bug after a failed logout cleanup.
+    </div>
+    <div class="q">
+      <strong>Q11. How do you run tests in parallel?</strong>
+      Unique UDID, ports, and driver instances. TestNG/JUnit or pytest-xdist plus a farm. One Appium server can host multiple sessions if ports do not collide.
+    </div>
+    <div class="q">
+      <strong>Q12. How do you handle permission dialogs?</strong>
+      Android: <code>autoGrantPermissions</code> or <code>adb shell pm grant</code>. iOS: autoAcceptAlerts or explicit SpringBoard alert locators. Do not sleep and hope.
+    </div>
+    <div class="q">
+      <strong>Q13. Inspector shows the button; the test cannot find it. Why?</strong>
+      Wrong context, stale hierarchy after animation, toast overlay, or a locator that matches a different node. Dump page source, screenshot, and context list at failure.
+    </div>
+    <div class="q">
+      <strong>Q14. What is WebDriverAgent?</strong>
+      The XCUITest driver installs WDA on the iOS device. Appium proxies to it. Signing, iOS version mismatch, and a stale WDA are the top iOS setup failures.
+    </div>
+    <div class="q">
+      <strong>Q15. How is Appium different from Detox or Maestro?</strong>
+      Appium: black-box, any stack, WebDriver, slower. Detox: gray-box React Native with idle sync. Maestro: YAML flows, fast to author, weaker as a full language framework.
+    </div>
+    <div class="q">
+      <strong>Q16. How do you assert a toast?</strong>
+      Toasts are transient. Use a short explicit wait on text, UiAutomator toast capture, or logcat. Do not <code>Thread.sleep(5000)</code>.
+    </div>
+    <div class="q">
+      <strong>Q17. Biometrics, OTP, SMS?</strong>
+      Farms expose biometric inject helpers. OTP: test hooks, mock inbox, or backend seed. Avoid scraping production SMS if a hook exists.
+    </div>
+    <div class="q">
+      <strong>Q18. What belongs in a CI failure artifact?</strong>
+      Appium server log, device log, screenshot, optional video, capability dump, and the page source. Without those, flake is undebuggable.
+    </div>
+    <div class="q">
+      <strong>Q19. How do you stop a long navigation from making tests flaky?</strong>
+      Deep links, seeded test accounts, <code>noReset</code> where safe, and APIs to put the app in a known state before the UI assertion.
+    </div>
+    <div class="q">
+      <strong>Q20. Walk through a flaky checkout.</strong>
+      Reproduce on one UDID → Inspector vs failure screenshot → context list → locator uniqueness → wait for clickable → disable animations → pin driver versions → add a targeted wait, not a global sleep.
+    </div>
+    <div class="q">
+      <strong>Q21. What is <code>newCommandTimeout</code>?</strong>
+      Seconds Appium waits between commands before killing the session. Long explicit waits plus a low timeout look like infrastructure flake.
+    </div>
+    <div class="q">
+      <strong>Q22. Can one script cover Android and iOS?</strong>
+      Shared flow and accessibility ids, yes. Separate drivers, caps, and some locators. Abstract the driver behind a page object; do not pretend every locator is identical.
+    </div>
+
+    <h2 id="room">8. How to answer in the room</h2>
+    <ul>
+      <li>Name versions: Appium 2.x, UiAutomator2 / XCUITest, and the client (Java client 9, Python Appium 4, or WebdriverIO).</li>
+      <li>Bring one incident: WebView context, WDA signing, Chromedriver mismatch, or a parallel port clash.</li>
+      <li>If mobile experience is thin, say so. Walk architecture, locator ranking, and W3C Actions honestly. Curiosity beats invented farm war stories.</li>
+      <li>When they ask you to write code, prefer W3C options + <code>AppiumBy</code> + an explicit wait + a pointer sequence.</li>
+    </ul>
+
+    <footer>
+      Sichakra · mathematics, algorithms, cybersecurity, automation, and quantum computing ·
+      <a href="https://sichakra.in">sichakra.in</a>
+    </footer>
+  </main>
+</body>
+</html>
