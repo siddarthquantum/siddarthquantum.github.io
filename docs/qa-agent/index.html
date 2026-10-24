@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Agent | Sichakra</title>
+    <meta name="description" content="An AI agent that explores an Android app, writes manual test cases, and runs them only after human approval, with screenshot evidence for every step.">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b090a;
+            --card-bg: rgba(26, 18, 11, 0.8);
+            --gold-primary: #d4af37;
+            --gold-light: #f3e5ab;
+            --text-main: #f5f3ef;
+            --text-muted: #b0a89f;
+            --line: rgba(212, 175, 55, 0.25);
+            --ok: #8fd18f;
+            --wait: #e8c36a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Poppins', sans-serif;
+            background-image: radial-gradient(circle at 50% 10%, #2c1a0e 0%, #0b090a 70%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        a { color: var(--gold-primary); }
+        header {
+            text-align: center;
+            padding: 4rem 1rem 2rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-primary);
+            font-size: clamp(2rem, 6vw, 2.8rem);
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+        h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-primary);
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+        h3 { color: var(--gold-light); font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .subtitle { font-size: 1.05rem; color: var(--text-muted); max-width: 640px; margin: 0 auto; }
+        .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; }
+        .chip {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 0.2rem 0.8rem;
+            font-size: 0.8rem;
+            color: var(--gold-light);
+        }
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 16px; }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .card p, .card li { color: var(--text-muted); font-size: 0.95rem; }
+        .card p + p { margin-top: 0.8rem; }
+        .status {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.15rem 0.7rem;
+            border-radius: 999px;
+            margin-bottom: 1rem;
+            border: 1px solid currentColor;
+        }
+        .status.wait { color: var(--wait); }
+        .status.ok { color: var(--ok); }
+
+        /* pipeline */
+        .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6rem; margin-top: 1.2rem; }
+        .stage {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 0.9rem 0.7rem;
+            text-align: center;
+            position: relative;
+            background: rgba(0,0,0,0.25);
+        }
+        .stage .n { font-family: 'Cinzel', serif; color: var(--gold-primary); font-size: 0.85rem; }
+        .stage h3 { margin: 0.2rem 0; font-size: 0.95rem; }
+        .stage p { font-size: 0.8rem; line-height: 1.4; }
+        .stage.human { border-color: var(--gold-primary); background: rgba(212, 175, 55, 0.08); }
+        .stage:not(:last-child)::after {
+            content: "›";
+            position: absolute;
+            right: -0.55rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gold-primary);
+            font-size: 1.2rem;
+        }
+
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; margin-top: 0.5rem; }
+        .grid2 div p { font-size: 0.88rem; }
+
+        pre {
+            background: rgba(0,0,0,0.45);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            color: var(--gold-light);
+            line-height: 1.5;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.5rem; }
+        th, td { text-align: left; padding: 0.55rem 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); vertical-align: top; }
+        th { color: var(--gold-light); font-weight: 600; }
+        td { color: var(--text-muted); }
+        td.ok { color: var(--ok); white-space: nowrap; }
+        td.wait { color: var(--wait); white-space: nowrap; }
+
+        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+        figure { text-align: center; }
+        figure img {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            display: block;
+        }
+        figcaption { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4; }
+
+        footer {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(212, 175, 55, 0.1);
+        }
+        footer a { text-decoration: none; }
+
+        @media (max-width: 720px) {
+            .card { padding: 1.3rem; }
+            .flow { grid-template-columns: 1fr; }
+            .stage:not(:last-child)::after { content: "⌄"; right: 50%; top: auto; bottom: -0.95rem; transform: translateX(50%); }
+            .grid2 { grid-template-columns: 1fr; }
+            .gallery { grid-template-columns: 1fr 1fr; }
+            th:nth-child(3), td:nth-child(3) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Sichakra QA Agent</h1>
+        <p class="subtitle">An AI agent that explores an Android app, writes manual test cases, and runs them
+            only after a human approves them, with a screenshot for every step.</p>
+        <div class="chips">
+            <span class="chip">Google ADK</span>
+            <span class="chip">Gemini Flash</span>
+            <span class="chip">Model Context Protocol</span>
+            <span class="chip">Appium · UiAutomator2</span>
+            <span class="chip">Python 3.12</span>
+            <span class="chip">M.Tech AI/ML lab project</span>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <section class="card">
+            <span class="status wait">Status · 25 Oct 2026 · build complete, live evaluation pending</span>
+            <h2>What it does</h2>
+            <p>Manual test cases are slow to write and easy to get wrong. This agent looks at a real Android app the way a
+                tester does: it opens the app, moves through the screens, writes clear test cases from what it saw, and then
+                runs them on the device. Every step leaves screenshot evidence.</p>
+            <p>The AI never runs anything on its own authority. Test cases run only after a human has reviewed and
+                approved them, and the device server checks that approval cryptographically before every test.</p>
+        </section>
+
+        <section class="card">
+            <h2>How it works</h2>
+            <div class="flow">
+                <div class="stage"><div class="n">1</div><h3>Explorer</h3><p>Taps through the app and writes an exploration map</p></div>
+                <div class="stage"><div class="n">2</div><h3>Test Designer</h3><p>Turns the map into structured test cases</p></div>
+                <div class="stage human"><div class="n">3</div><h3>Human approval</h3><p>Review, approve, SHA-256 recorded</p></div>
+                <div class="stage"><div class="n">4</div><h3>Executor</h3><p>Runs approved steps, one screenshot each</p></div>
+                <div class="stage"><div class="n">5</div><h3>Report</h3><p>Pass / fail per test with evidence</p></div>
+            </div>
+            <div class="grid2" style="margin-top:1.8rem">
+                <div>
+                    <h3>Agents (Google ADK)</h3>
+                    <p>A coordinator routes each request to either the explore-and-design team or the executor. The
+                        two jobs never share one automatic chain, so execution can't start by accident.</p>
+                </div>
+                <div>
+                    <h3>Device server (MCP)</h3>
+                    <p>The agents reach the phone only through a custom MCP server that wraps Appium. It gives the
+                        model a compact list of what is on screen, about 13.6 KB of raw XML shrunk to 1.8 KB.</p>
+                </div>
+            </div>
+            <pre>root coordinator (LlmAgent)
+ ├─ explore_and_design  →  explorer → test_designer → proposed_tests.json
+ │                          (human: approve.py → approved_tests.json + SHA-256)
+ └─ executor            →  MCP server --execute → Appium → Android emulator</pre>
+        </section>
+
+        <section class="card">
+            <h2>Safety by design</h2>
+            <div class="grid2">
+                <div><h3>Approval gate</h3><p>In execute mode the device refuses every tap until the approved test file
+                    matches the SHA-256 hash recorded at approval. If someone edits the file after approval, execution stops.</p></div>
+                <div><h3>Credentials never reach the AI</h3><p>The model types placeholders such as {{PASSWORD}}. The
+                    device server swaps in the real value and hides it again from everything the model reads.</p></div>
+                <div><h3>Masked evidence</h3><p>Password, PIN and OTP fields are blacked out from the live screen
+                    before a screenshot is first written to disk.</p></div>
+                <div><h3>Guard rails</h3><p>The agent can only act on the app under test, only on elements from the
+                    latest screen, and only within a fixed number of steps per test.</p></div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Evidence from the device</h2>
+            <p>Screenshots taken through the agent's own screenshot tool on Appium's public ApiDemos sample app.
+                Client-app login and OTP screens are never published.</p>
+            <div class="gallery">
+                <figure>
+                    <img src="assets/apidemos-home.png" alt="ApiDemos home screen listing Accessibility, Animation, App, Preference and other sections" width="540" height="1200" loading="lazy">
+                    <figcaption>Home screen read by the device server: 13 elements, 12 tappable</figcaption>
+                </figure>
+                <figure>
+                    <img src="assets/preference-list.png" alt="Preference section list in ApiDemos" width="540" height="1200" loading="lazy">
+                    <figcaption>After tap: the Preference list, found by its accessibility label</figcaption>
+                </figure>
+                <figure>
+                    <img src="assets/wifi-dialog.png" alt="WiFi settings dialog with text typed into the field" width="540" height="1200" loading="lazy">
+                    <figcaption>Checkbox ticked, dialog opened, text typed, then checked on screen</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Verification so far</h2>
+            <table>
+                <tr><th>Check</th><th>Result</th><th>Detail</th></tr>
+                <tr><td>Automated tests</td><td class="ok">64 passing</td><td>Screen parsing, guards, approval gate, masking, re-runs, agent wiring</td></tr>
+                <tr><td>Device server end to end</td><td class="ok">Passed</td><td>Launch, read screen, tap, scroll, type, back, assert, screenshot on the emulator</td></tr>
+                <tr><td>Approved execution</td><td class="ok">Passed</td><td>Fresh start per test, test continuing from the previous one, re-running only failed tests</td></tr>
+                <tr><td>Agent exploration</td><td class="wait">Partial</td><td>The AI explorer navigated Home → Preference → sub-screens by itself, then stopped at the model's free-tier daily request limit</td></tr>
+                <tr><td>Full evaluation (M1–M8)</td><td class="wait">Pending</td><td>Published here after the complete explore → approve → execute run</td></tr>
+            </table>
+        </section>
+
+    </div>
+
+    <footer>
+        <p><a href="../">← sichakra.in</a> · Published on <a href="https://sichakra.in">sichakra.in</a> via GitHub Pages</p>
+    </footer>
+
+</body>
+</html>
