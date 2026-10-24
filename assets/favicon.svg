@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 400 400" role="img" aria-label="Sichakra">
+<defs>
+<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD36B"/><stop offset="1" stop-color="#F4A300"/></linearGradient>
+<radialGradient id="s"><stop offset="0" stop-color="#1B2470"/><stop offset="1" stop-color="#070A2C"/></radialGradient>
+<path id="f" fill="url(#g)" d="M0,-62C16,-80 22,-100 10,-122C8,-130 12,-136 16,-142C-6,-134 -22,-116 -20,-96C-19,-84 -10,-72 0,-62Z"/>
+<path id="p" fill="url(#g)" d="M0,-10C12,-20 14,-34 0,-50C-14,-34 -12,-20 0,-10Z"/>
+</defs>
+<path d="M0.0,-158.0L26.9,-196.2L27.4,-155.6L60.5,-188.5L54.0,-148.5L92.3,-175.1L79.0,-136.8L121.4,-156.5L101.6,-121.0L146.7,-133.0L121.0,-101.6L167.5,-105.5L136.8,-79.0L183.3,-74.8L148.5,-54.0L193.5,-41.8L155.6,-27.4L197.9,-7.6L158.0,0.0L196.2,26.9L155.6,27.4L188.5,60.5L148.5,54.0L175.1,92.3L136.8,79.0L156.5,121.4L121.0,101.6L133.0,146.7L101.6,121.0L105.5,167.5L79.0,136.8L74.8,183.3L54.0,148.5L41.8,193.5L27.4,155.6L7.6,197.9L0.0,158.0L-26.9,196.2L-27.4,155.6L-60.5,188.5L-54.0,148.5L-92.3,175.1L-79.0,136.8L-121.4,156.5L-101.6,121.0L-146.7,133.0L-121.0,101.6L-167.5,105.5L-136.8,79.0L-183.3,74.8L-148.5,54.0L-193.5,41.8L-155.6,27.4L-197.9,7.6L-158.0,0.0L-196.2,-26.9L-155.6,-27.4L-188.5,-60.5L-148.5,-54.0L-175.1,-92.3L-136.8,-79.0L-156.5,-121.4L-121.0,-101.6L-133.0,-146.7L-101.6,-121.0L-105.5,-167.5L-79.0,-136.8L-74.8,-183.3L-54.0,-148.5L-41.8,-193.5L-27.4,-155.6L-7.6,-197.9L-0.0,-158.0Z" fill="url(#g)" stroke="#8A5200" stroke-width="3" stroke-linejoin="round"/>
+<circle r="160" fill="url(#s)" stroke="#8A5200" stroke-width="3"/>
+<circle r="146" fill="none" stroke="url(#g)" stroke-width="10"/>
+<use href="#f" transform="rotate(0)"/><use href="#f" transform="rotate(45)"/><use href="#f" transform="rotate(90)"/><use href="#f" transform="rotate(135)"/><use href="#f" transform="rotate(180)"/><use href="#f" transform="rotate(225)"/><use href="#f" transform="rotate(270)"/><use href="#f" transform="rotate(315)"/>
+<circle r="58" fill="#0E1448" stroke="url(#g)" stroke-width="8"/>
+<use href="#p" transform="rotate(0)"/><use href="#p" transform="rotate(45)"/><use href="#p" transform="rotate(90)"/><use href="#p" transform="rotate(135)"/><use href="#p" transform="rotate(180)"/><use href="#p" transform="rotate(225)"/><use href="#p" transform="rotate(270)"/><use href="#p" transform="rotate(315)"/>
+<circle r="10" fill="#FFD36B"/>
+</svg>
