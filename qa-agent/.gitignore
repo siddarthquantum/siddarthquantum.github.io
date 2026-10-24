@@ -1,6 +1,7 @@
 # secrets and local config
 .env
 profiles/client.env
+CLAUDE.md
 # run artifacts and binaries
 runs/
 *.apk
