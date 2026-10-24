@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 400 400" role="img" aria-labelledby="chakra-title chakra-desc">
+<title id="chakra-title">Sichakra logo: a Sudarshana Chakra carrying the names Jiya, Siddarth, Shanti, Ramdeo and Neelam</title>
+<desc id="chakra-desc">Motto: एक चक्र · पाँच हृदय (One wheel · five hearts)</desc>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600&amp;family=Noto+Sans+Devanagari:wght@500&amp;display=swap");
+.spin,.counter,.glow{transform-box:view-box;transform-origin:50% 50%}
+.spin{animation:cw 30s linear infinite}
+.counter{animation:cw 60s linear infinite reverse}
+.glow{animation:pulse 4s ease-in-out infinite alternate}
+svg:hover .spin,svg:hover .counter,svg:hover .glow{animation-play-state:paused}
+@keyframes cw{to{transform:rotate(360deg)}}
+@keyframes pulse{from{transform:scale(.85)}to{transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.spin,.counter,.glow{animation:none}}
+.names{font:600 15px Cinzel,"Trajan Pro",Georgia,serif;letter-spacing:2px;fill:#FFD36B;text-anchor:middle}
+.names .dot{fill:#F4A300}
+.motto{font:500 11.5px "Noto Sans Devanagari","Nirmala UI","Mangal",sans-serif;fill:#FFE6A8;text-anchor:middle}
+.gold-line{fill:none;stroke:url(#gold);}
+</style>
+<defs>
+<linearGradient id="gold" x1="0" y1="-1" x2="0" y2="1" gradientUnits="objectBoundingBox">
+<stop offset="0" stop-color="#FFD36B"/><stop offset="1" stop-color="#F4A300"/>
+</linearGradient>
+<radialGradient id="gold-r"><stop offset="0" stop-color="#FFE9A8"/><stop offset=".6" stop-color="#FFD36B"/><stop offset="1" stop-color="#F4A300"/></radialGradient>
+<radialGradient id="space"><stop offset="0" stop-color="#1B2470"/><stop offset=".7" stop-color="#0E1448"/><stop offset="1" stop-color="#070A2C"/></radialGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="#FFD36B" stop-opacity=".9"/><stop offset=".55" stop-color="#F4A300" stop-opacity=".35"/><stop offset="1" stop-color="#F4A300" stop-opacity="0"/></radialGradient>
+<path id="ring-names" d="M-130,0a130,130 0 1,1 260,0a130,130 0 1,1 -260,0"/>
+<path id="ring-motto" d="M-52,0a52,52 0 1,1 104,0a52,52 0 1,1 -104,0"/>
+<path id="flame" fill="url(#gold)" d="M0,-74C7,-82 11,-92 6,-102C4,-108 6,-113 9,-118C-1,-114 -9,-106 -9,-96C-9,-88 -5,-80 0,-74Z"/>
+<path id="petal" fill="url(#gold)" d="M0,-8C6,-14 7,-24 0,-34C-7,-24 -6,-14 0,-8Z"/>
+</defs>
+
+<g class="spin">
+<path d="M0.0,-168.0L8.6,-189.8L9.8,-167.7L19.6,-189.0L19.5,-166.9L30.6,-187.5L29.2,-165.4L41.4,-185.4L38.7,-163.5L52.2,-182.7L48.2,-160.9L62.7,-179.4L57.5,-157.9L73.0,-175.4L66.5,-154.3L83.1,-170.9L75.4,-150.1L92.9,-165.7L84.0,-145.5L102.4,-160.1L92.3,-140.4L111.5,-153.8L100.3,-134.8L120.3,-147.1L108.0,-128.7L128.6,-139.9L115.3,-122.2L136.5,-132.1L122.2,-115.3L144.0,-124.0L128.7,-108.0L150.9,-115.4L134.8,-100.3L157.4,-106.4L140.4,-92.3L163.3,-97.1L145.5,-84.0L168.7,-87.4L150.1,-75.4L173.5,-77.5L154.3,-66.5L177.7,-67.3L157.9,-57.5L181.3,-56.8L160.9,-48.2L184.3,-46.2L163.5,-38.7L186.7,-35.4L165.4,-29.2L188.4,-24.5L166.9,-19.5L189.5,-13.5L167.7,-9.8L190.0,-2.4L168.0,0.0L189.8,8.6L167.7,9.8L189.0,19.6L166.9,19.5L187.5,30.6L165.4,29.2L185.4,41.4L163.5,38.7L182.7,52.2L160.9,48.2L179.4,62.7L157.9,57.5L175.4,73.0L154.3,66.5L170.9,83.1L150.1,75.4L165.7,92.9L145.5,84.0L160.1,102.4L140.4,92.3L153.8,111.5L134.8,100.3L147.1,120.3L128.7,108.0L139.9,128.6L122.2,115.3L132.1,136.5L115.3,122.2L124.0,144.0L108.0,128.7L115.4,150.9L100.3,134.8L106.4,157.4L92.3,140.4L97.1,163.3L84.0,145.5L87.4,168.7L75.4,150.1L77.5,173.5L66.5,154.3L67.3,177.7L57.5,157.9L56.8,181.3L48.2,160.9L46.2,184.3L38.7,163.5L35.4,186.7L29.2,165.4L24.5,188.4L19.5,166.9L13.5,189.5L9.8,167.7L2.4,190.0L-0.0,168.0L-8.6,189.8L-9.8,167.7L-19.6,189.0L-19.5,166.9L-30.6,187.5L-29.2,165.4L-41.4,185.4L-38.7,163.5L-52.2,182.7L-48.2,160.9L-62.7,179.4L-57.5,157.9L-73.0,175.4L-66.5,154.3L-83.1,170.9L-75.4,150.1L-92.9,165.7L-84.0,145.5L-102.4,160.1L-92.3,140.4L-111.5,153.8L-100.3,134.8L-120.3,147.1L-108.0,128.7L-128.6,139.9L-115.3,122.2L-136.5,132.1L-122.2,115.3L-144.0,124.0L-128.7,108.0L-150.9,115.4L-134.8,100.3L-157.4,106.4L-140.4,92.3L-163.3,97.1L-145.5,84.0L-168.7,87.4L-150.1,75.4L-173.5,77.5L-154.3,66.5L-177.7,67.3L-157.9,57.5L-181.3,56.8L-160.9,48.2L-184.3,46.2L-163.5,38.7L-186.7,35.4L-165.4,29.2L-188.4,24.5L-166.9,19.5L-189.5,13.5L-167.7,9.8L-190.0,2.4L-168.0,0.0L-189.8,-8.6L-167.7,-9.8L-189.0,-19.6L-166.9,-19.5L-187.5,-30.6L-165.4,-29.2L-185.4,-41.4L-163.5,-38.7L-182.7,-52.2L-160.9,-48.2L-179.4,-62.7L-157.9,-57.5L-175.4,-73.0L-154.3,-66.5L-170.9,-83.1L-150.1,-75.4L-165.7,-92.9L-145.5,-84.0L-160.1,-102.4L-140.4,-92.3L-153.8,-111.5L-134.8,-100.3L-147.1,-120.3L-128.7,-108.0L-139.9,-128.6L-122.2,-115.3L-132.1,-136.5L-115.3,-122.2L-124.0,-144.0L-108.0,-128.7L-115.4,-150.9L-100.3,-134.8L-106.4,-157.4L-92.3,-140.4L-97.1,-163.3L-84.0,-145.5L-87.4,-168.7L-75.4,-150.1L-77.5,-173.5L-66.5,-154.3L-67.3,-177.7L-57.5,-157.9L-56.8,-181.3L-48.2,-160.9L-46.2,-184.3L-38.7,-163.5L-35.4,-186.7L-29.2,-165.4L-24.5,-188.4L-19.5,-166.9L-13.5,-189.5L-9.8,-167.7L-2.4,-190.0L-0.0,-168.0Z" fill="url(#gold-r)" stroke="#8A5200" stroke-width=".6" stroke-linejoin="round"/>
+<circle r="169" fill="url(#space)" stroke="#8A5200" stroke-width="1"/>
+<circle r="163" class="gold-line" stroke-width="2.5"/>
+<circle r="118" class="gold-line" stroke-width="1"/>
+<g><use href="#flame" transform="rotate(0)"/><use href="#flame" transform="rotate(22.5)"/><use href="#flame" transform="rotate(45)"/><use href="#flame" transform="rotate(67.5)"/><use href="#flame" transform="rotate(90)"/><use href="#flame" transform="rotate(112.5)"/><use href="#flame" transform="rotate(135)"/><use href="#flame" transform="rotate(157.5)"/><use href="#flame" transform="rotate(180)"/><use href="#flame" transform="rotate(202.5)"/><use href="#flame" transform="rotate(225)"/><use href="#flame" transform="rotate(247.5)"/><use href="#flame" transform="rotate(270)"/><use href="#flame" transform="rotate(292.5)"/><use href="#flame" transform="rotate(315)"/><use href="#flame" transform="rotate(337.5)"/></g>
+</g>
+
+<circle r="153" class="gold-line" stroke-width="1"/>
+<circle r="122" class="gold-line" stroke-width="1"/>
+<g class="counter"><text class="names"><textPath href="#ring-names" startOffset="10%">JIYA</textPath><textPath href="#ring-names" startOffset="20%" class="dot">•</textPath><textPath href="#ring-names" startOffset="30%">SIDDARTH</textPath><textPath href="#ring-names" startOffset="40%" class="dot">•</textPath><textPath href="#ring-names" startOffset="50%">SHANTI</textPath><textPath href="#ring-names" startOffset="60%" class="dot">•</textPath><textPath href="#ring-names" startOffset="70%">RAMDEO</textPath><textPath href="#ring-names" startOffset="80%" class="dot">•</textPath><textPath href="#ring-names" startOffset="90%">NEELAM</textPath><textPath href="#ring-names" startOffset="100%" class="dot">•</textPath></text></g>
+
+<circle class="glow" r="60" fill="url(#halo)" opacity=".55"/>
+<circle r="70" class="gold-line" stroke-width="1.5"/>
+<text class="motto" id="motto" data-en="One wheel · five hearts"><textPath href="#ring-motto" startOffset="25%">एक चक्र · पाँच हृदय</textPath></text>
+<use href="#motto" transform="rotate(180)"/>
+
+<circle r="44" fill="#0E1448" stroke="url(#gold)" stroke-width="2"/>
+<g><use href="#petal" transform="rotate(0)"/><use href="#petal" transform="rotate(45)"/><use href="#petal" transform="rotate(90)"/><use href="#petal" transform="rotate(135)"/><use href="#petal" transform="rotate(180)"/><use href="#petal" transform="rotate(225)"/><use href="#petal" transform="rotate(270)"/><use href="#petal" transform="rotate(315)"/></g>
+<circle r="7" fill="url(#gold-r)"/>
+</svg>
