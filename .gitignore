@@ -1,0 +1,14 @@
+# secrets and local config
+.env
+profiles/client.env
+# run artifacts and binaries
+runs/
+*.apk
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# IDE
+.idea/
+.vscode/
