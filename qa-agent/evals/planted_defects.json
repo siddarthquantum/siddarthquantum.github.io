@@ -1,0 +1,8 @@
+{
+  "description": "M5 planted-defect check: approve.py --plant-defects replaces the target of the LAST assert_visible step in the first 2 tests that have one. A correct Executor must report both tests as fail.",
+  "count": 2,
+  "wrong_texts": [
+    "Planted defect: Settings saved successfully",
+    "Planted defect: Welcome back"
+  ]
+}

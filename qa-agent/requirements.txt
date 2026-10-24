@@ -1,0 +1,8 @@
+google-adk
+mcp
+Appium-Python-Client
+python-dotenv
+pydantic
+jinja2
+pillow
+pytest
