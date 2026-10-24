@@ -116,11 +116,20 @@ D5 approval.json lives in runs/<id>/, written only by the author running scripts
       launch_app now restarts the app.
 - [x] Step 4e re-runs: D2 revised (clear data), D6 overwrite, D7 selection, D8 fresh_start + dependency chain,
       end_test + results.json; pytest 45 passing (~7 s); live executor run on emulator verified all four.
-- [ ] Step 5 ADK agents (R2 coordinator layout, R4 pacing/text-only) + skills/*.md + scripts/approve.py (R5), adk web
+- [~] Step 5 code done (qa_agent/agent.py, callbacks.py, test_cases.py, skills/*/SKILL.md, scripts/approve.py,
+      evals/planted_defects.json, click-only fast mode QA_CLICK_ONLY/QA_MAX_SCREENS/QA_MAX_TESTS); pytest 64 passing.
+      Live run 25 Oct: coordinator -> explorer worked on the emulator (launch, Preference, 2 sub-screens), then
+      BLOCKED: free tier for gemini-3.8-flash = 20 requests PER DAY (not per minute). Quota resets after ~11 h.
+      A full demo needs ~40-80 calls. Decide: enable billing (Tier 1) or a model with a higher free quota.
+      Also: retry_options retries 429 for 10-60 s, useless for a DAILY limit -> fail fast with a clear message.
+      Server lesson: a new Appium session kills the older one (explore vs execute process) -> SESSION_LOST +
+      auto-reconnect in launch_app/begin_test.
+      Git: repo initialised, branch main, commits 4c652f0 (project) + 365807d (hanuman page). Author pushes.
 - [ ] Step 6 HTML report, adk eval (evals/), metrics M1-M8, publish docs/ to sichakra.in/qa-agent/
 
 ## Next step
-Step 5: qa_agent/agent.py (R2 coordinator layout, R4 pacing via before_model_callback + text-only),
-skills/*.md, scripts/approve.py (R5 --plant-defects, evals/planted_defects.json), run in adk web.
+1. Author decides the quota fix (billing / other model), then rerun explore+design (click-only) in adk web,
+   approve with scripts/approve.py (--plant-defects), run the executor, check results.json + evidence.
+2. Build docs/qa-agent/index.html for sichakra.in (style of docs/hanuman-chalisa: dark + gold, Cinzel/Poppins):
+   overview + architecture + safety + ApiDemos demo results (no client-app screens). Author commits and pushes.
 Explorer/Designer McpToolset: `python -m mcp_server.server`; Executor: `... --execute`.
-Test Designer must output "fresh_start" per test (false only for tests that continue a previous one).
