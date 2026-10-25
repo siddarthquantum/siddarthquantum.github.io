@@ -56,10 +56,17 @@ def step_label(path: str) -> str:
     return stem.replace("_", " ")
 
 
-def build(run_dir: Path, session: str | None = None) -> Path:
+PUBLIC_PROFILES = ("apidemos-",)  # security rule: client-app runs are never published
+
+
+def build(run_dir: Path, session: str | None = None, publish: bool = False) -> Path:
     run_id = run_dir.name
     approved = load(run_dir / "approved_tests.json", {"tests": []})
     approval = load(run_dir / "approval.json", {})
+    if publish:
+        if not run_id.startswith(PUBLIC_PROFILES):
+            raise SystemExit(f"{run_id}: only ApiDemos runs may be published (client-app screens stay private).")
+        approval = {**approval, "approved_by": "the author"}  # no local Windows user name on the public site
     results_file = load(run_dir / "results.json", {"tests": {}})
     results, history = results_file.get("tests", {}), results_file.get("history", {})
     planted = {p["test_id"]: p for p in approval.get("planted_defects", [])}
@@ -79,7 +86,8 @@ def build(run_dir: Path, session: str | None = None) -> Path:
     finished = [x["result"].get("finished_at") for x in tests if x["result"] and x["result"].get("finished_at")]
     span = f"{min(started)} to {max(finished)}" if started and finished else (max(finished) if finished else "")
 
-    out = run_dir / "report.html"
+    out = ROOT / "docs" / "qa-agent" / "reports" / f"{run_id}.html" if publish else run_dir / "report.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page(run_id, approval, tests, counts, usage, span, planted, run_dir), encoding="utf-8")
     return out
 
@@ -92,7 +100,7 @@ def page(run_id, approval, tests, counts, usage, span, planted, run_dir) -> str:
     usage_html = (f"""<table class="kv"><tr><th>Model calls</th><td>{usage['calls']}</td></tr>
         <tr><th>Tokens</th><td>{usage['total']:,} ({usage['prompt']:,} in / {usage['output']:,} out)</td></tr>
         <tr><th>Models</th><td>{esc(', '.join(usage['models']))}</td></tr>
-        <tr><th>Agent time</th><td>{usage['seconds'] // 60} min {usage['seconds'] % 60} s</td></tr></table>
+        <tr><th>First to last model call (incl. human review)</th><td>{usage['seconds'] // 60} min {usage['seconds'] % 60} s</td></tr></table>
         <table class="grid"><tr><th>Phase</th><th>Calls</th><th>Tokens</th></tr>{phases}</table>"""
                   if usage["calls"] else '<p class="muted">No usage lines are tagged with this run '
                   '(runs before 25 Oct evening). Use --session &lt;adk session id&gt;.</p>')
@@ -211,13 +219,15 @@ def main():
     ap = argparse.ArgumentParser(description="Build runs/<run_id>/report.html")
     ap.add_argument("run_dir", help="e.g. runs/apidemos-20261025-105313")
     ap.add_argument("--session", help="adk session id (runs/_usage/<id>.jsonl) for runs before run tagging")
+    ap.add_argument("--publish", action="store_true",
+                    help="write docs/qa-agent/reports/<run_id>.html for sichakra.in (ApiDemos only, no user name)")
     a = ap.parse_args()
     run_dir = Path(a.run_dir)
     if not run_dir.is_absolute():
         run_dir = (Path.cwd() / run_dir) if (Path.cwd() / run_dir).exists() else ROOT / a.run_dir
     if not (run_dir / "approved_tests.json").exists():
         sys.exit(f"{run_dir} has no approved_tests.json - approve the run first (scripts/approve.py).")
-    out = build(run_dir.resolve(), a.session)
+    out = build(run_dir.resolve(), a.session, a.publish)
     print(f"Report: {out}")
 
 

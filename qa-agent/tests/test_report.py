@@ -91,3 +91,20 @@ def test_report_builds_with_scores_reasons_and_embedded_screenshots(tmp_path, mo
     assert "data:image/jpeg;base64," in page                      # screenshot embedded: works offline
     assert "Open &lt;Preference&gt;" in page                        # escaped
     assert "NOT RUN" in page                                        # TC02 has no result
+
+
+def test_publish_hides_user_name_and_refuses_client_runs(tmp_path, monkeypatch):
+    import pytest
+    from report import build_report
+    root = tmp_path / "qa"
+    for rid in ("apidemos-1", "client-1"):
+        run = root / "runs" / rid
+        run.mkdir(parents=True)
+        (run / "approved_tests.json").write_text(json.dumps({"tests": []}))
+        (run / "approval.json").write_text(json.dumps({"approved_by": "shant", "planted_defects": []}))
+    monkeypatch.setattr(build_report, "ROOT", root)
+    out = build_report.build(root / "runs" / "apidemos-1", publish=True)
+    assert out == root / "docs" / "qa-agent" / "reports" / "apidemos-1.html"
+    assert "shant" not in out.read_text(encoding="utf-8")
+    with pytest.raises(SystemExit):
+        build_report.build(root / "runs" / "client-1", publish=True)
