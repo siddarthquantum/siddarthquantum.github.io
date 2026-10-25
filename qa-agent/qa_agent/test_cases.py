@@ -146,6 +146,8 @@ def save_proposed_tests(tests_json: str, tool_context=None) -> dict:
     run_dir = RUNS / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     out = run_dir / "proposed_tests.json"
+    if tool_context is not None:
+        tool_context.state["design_run_id"] = run_id  # tags the usage log (M7) with this run
     out.write_text(json.dumps({"run_id": run_id, "profile": os.getenv("QA_PROFILE", ""),
                                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                                **suite.model_dump()}, indent=2), encoding="utf-8")

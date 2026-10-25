@@ -21,16 +21,12 @@ from google.adk.models.llm_response import LlmResponse
 from google.genai import errors, types
 
 ROOT = Path(__file__).resolve().parent.parent
+MIN_GAP = float(os.getenv("QA_MIN_TURN_SECONDS", "4"))
 USAGE_DIR = ROOT / "runs" / "_usage"
 
 _lock = asyncio.Lock()
 _last_call = 0.0
 _daily_block = None  # message once a per-day quota is exhausted; cleared by restarting adk web
-
-
-def min_gap() -> float:
-    # Read on every call, not at import: agent.py imports this module before load_dotenv() runs.
-    return float(os.getenv("QA_MIN_TURN_SECONDS", "4"))
 
 
 def text_response(text: str) -> LlmResponse:
@@ -52,7 +48,7 @@ async def pace_model_calls(callback_context, llm_request):
     if _daily_block:
         return text_response(_daily_block)  # skip the API call: it would only fail again
     async with _lock:
-        wait = _last_call + min_gap() - time.monotonic()
+        wait = _last_call + MIN_GAP - time.monotonic()
         if wait > 0:
             await asyncio.sleep(wait)
         _last_call = time.monotonic()
@@ -64,11 +60,6 @@ def track_screens(tool, args, tool_context, tool_response):
     result = tool_result(tool_response)
     if tool.name == "get_screen" and result.get("ok"):
         tool_context.state["temp:few_elements"] = bool(result.get("few_elements"))
-        # Every text really seen on the device; save_proposed_tests only accepts targets from this set.
-        seen = set(tool_context.state.get("seen_texts") or [])
-        for el in result.get("elements", []):
-            seen.update(v for k in ("text", "label", "desc") if (v := el.get(k)))
-        tool_context.state["seen_texts"] = sorted(seen)
     elif tool.name == "screenshot" and result.get("ok") and tool_context.state.get("temp:few_elements"):
         tool_context.state["temp:vision_png"] = result["path"]
     return None  # keep the tool result unchanged
