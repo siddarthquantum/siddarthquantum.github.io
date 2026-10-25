@@ -64,6 +64,44 @@ def _sensitive_name(node) -> bool:
     return False
 
 
+def locator_kind(locator) -> str:
+    """resource-id | accessibility-id | text | coordinates (feeds the report's confidence score)."""
+    if not locator:
+        return ""
+    if locator["by"] == "id":
+        return "resource-id"
+    if locator["by"] == "accessibility id":
+        return "accessibility-id"
+    return "coordinates" if "@bounds" in locator["value"] else "text"
+
+
+def logged(action):
+    """Execute mode, inside a test: append each step's facts to the test's step log (Step 6 confidence).
+    Outermost decorator, so errors turned into results by @safe are logged too (they count as retries)."""
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            eid = kwargs.get("eid", args[0] if args and action != "assert" else None)
+            locator, label = self.locators.get(eid), self.screen_labels.get(eid, "")
+            result = fn(self, *args, **kwargs)
+            if self.mode == "execute" and self.current_test:
+                entry = {"n": len(self.step_log) + 1, "action": action, "ok": bool(result.get("ok")),
+                         "target": label, "locator": locator_kind(locator)}
+                if action == "assert":
+                    text = kwargs.get("text", args[0] if args else "")
+                    matches = result.get("matches") or []
+                    entry.update(target=text, visible=bool(result.get("visible")), matches=matches,
+                                 exact=any((m or "").strip().lower() == text.strip().lower() for m in matches))
+                if not result.get("ok"):
+                    entry["error"] = result.get("error", "")
+                if result.get("screenshot"):
+                    entry["screenshot"] = result["screenshot"]
+                self.step_log.append(entry)
+            return result
+        return wrapper
+    return deco
+
+
 def safe(fn):
     """Turn any exception into an APPIUM_ERROR result, with secrets scrubbed from the message."""
     @functools.wraps(fn)
@@ -94,12 +132,16 @@ class Device:
         self.current_test = None
         self.last_status = None
         self.evidence = []         # screenshot paths of the current test
+        self.step_log = []         # facts per executed step of the current test (report confidence)
+        self.history = {}          # test id -> every verdict ever recorded, kept across re-runs
+        self.test_started = None
         self.app_package = cfg["app_package"]
         self.step_limit = cfg.get("step_limit", 25)
         self._driver_factory = driver_factory or self._appium_driver
         self.driver = None
         self.locators = {}       # eid -> locator, from the latest get_screen only
         self.screen_bounds = {}  # eid -> [x1, y1, x2, y2]
+        self.screen_labels = {}  # eid -> visible label, for the step log
         self.stale = True        # True after anything that may change the screen
         self.steps = 0
         self.masked = set()      # locators of fields that received a secret (masked in screenshots)
@@ -219,13 +261,16 @@ class Device:
     def _results_file(self):
         return self.runs_dir / self.run_id / "results.json"
 
-    def _load_results(self, run_id):
+    def _load_file(self, run_id):
         f = self.runs_dir / run_id / "results.json"
-        return json.loads(f.read_text(encoding="utf-8")).get("tests", {}) if f.exists() else {}
+        return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+    def _load_results(self, run_id):
+        return self._load_file(run_id).get("tests", {})
 
     def _save_results(self):
-        self._results_file().write_text(json.dumps({"run_id": self.run_id, "tests": self.results}, indent=2),
-                                        encoding="utf-8")
+        self._results_file().write_text(json.dumps(
+            {"run_id": self.run_id, "tests": self.results, "history": self.history}, indent=2), encoding="utf-8")
 
     @safe
     def begin_execution(self, run_id: str, select: str = "all", rerun: bool = False):
@@ -257,6 +302,7 @@ class Device:
             shutil.rmtree(evidence / tid, ignore_errors=True)
             previous.pop(tid, None)
         self.run_id, self.current_test, self.last_status = run_id, None, None
+        self.history = self._load_file(run_id).get("history", {})  # survives re-runs: "same verdict in 3 runs"
         self.tests = {t["id"]: t for t in tests}
         self.selected, self.results = ids, previous
         self._save_results()
@@ -290,7 +336,8 @@ class Device:
                                      "the starting state may be wrong.")
         self.current_test = test_id
         self.run_dir = self.runs_dir / self.run_id / "evidence" / test_id
-        self.shot_no, self.evidence = 0, []
+        self.shot_no, self.evidence, self.step_log = 0, [], []
+        self.test_started = time.strftime("%Y-%m-%dT%H:%M:%S")
         screen = self.get_screen()  # starting screen, so step 1 needs no get_screen call
         if screen.get("ok"):
             result["screen"] = {"activity": screen["activity"], "elements": screen["elements"]}
@@ -308,9 +355,12 @@ class Device:
         return {"ok": True, "test_id": test_id, "status": status, "remaining": remaining}
 
     def _record(self, status, actual):
+        finished = time.strftime("%Y-%m-%dT%H:%M:%S")
         self.results[self.current_test] = {
             "status": status, "actual": _scrub(actual)[:1000], "steps_used": self.steps,
-            "evidence": self.evidence, "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+            "evidence": self.evidence, "steps": self.step_log, "started_at": self.test_started,
+            "finished_at": finished}
+        self.history.setdefault(self.current_test, []).append({"status": status, "at": finished})
         self._save_results()
         self.last_status, self.current_test = status, None
 
@@ -367,6 +417,7 @@ class Device:
         s = parse_screen(self.driver.page_source, MAX_ELEMENTS, redact)
         self.locators = s["locators"]
         self.screen_bounds = {e["eid"]: e["bounds"] for e in s["elements"]}
+        self.screen_labels = {e["eid"]: e.get("label") or e.get("text") or e.get("desc", "") for e in s["elements"]}
         self.stale = False
         pkg = self._foreground()
         result = {"ok": True, "package": pkg, "activity": self.driver.current_activity,
@@ -380,6 +431,7 @@ class Device:
             result["few_elements"] = True
         return result
 
+    @logged("tap")
     @safe
     def tap(self, eid: str):
         locator, err = self._guarded(eid)
@@ -393,6 +445,7 @@ class Device:
         time.sleep(0.5)  # let the transition start before the next page_source
         return self._after_action({"ok": True, "tapped": eid}, "tap")
 
+    @logged("type")
     @safe
     def type_text(self, eid: str, text: str):
         locator, err = self._guarded(eid)
@@ -421,6 +474,7 @@ class Device:
             self.stale = False  # typing does not change the screen, so the eids stay valid
         return result
 
+    @logged("scroll")
     @safe
     def scroll(self, direction: str = "down", eid: str | None = None):
         if direction not in ("up", "down", "left", "right"):
@@ -438,6 +492,7 @@ class Device:
             "direction": direction, "percent": 0.7})
         return self._after_action({"ok": True, "direction": direction, "can_scroll_more": bool(more)}, "scroll")
 
+    @logged("back")
     @safe
     def press_back(self):
         err = self._need_session() or self._count_step()
@@ -447,6 +502,7 @@ class Device:
         time.sleep(0.5)
         return self._after_action({"ok": True}, "back")
 
+    @logged("assert")
     @safe
     def assert_visible(self, text: str):
         """Checks whether any element's text or content-desc contains `text` (case-insensitive)."""

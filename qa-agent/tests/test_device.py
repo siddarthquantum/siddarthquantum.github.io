@@ -528,3 +528,30 @@ def test_rerun_needs_explicit_flag(exe):
     assert r["error"] == "ALREADY_EXECUTED" and r["results"]["TC01"] == "pass"
     assert results(exe)["TC01"]["status"] == "pass"  # nothing was wiped
     assert exe.begin_execution("run1", rerun=True)["ok"]
+
+
+# ---------- Step 6: step log and verdict history feed the report's confidence ----------
+def test_step_log_records_locator_assert_match_and_errors(exe):
+    approve(exe.runs_dir, "run1", CHAIN)
+    exe.begin_execution("run1")
+    start = exe.begin_test("TC01")
+    first = start["screen"]["elements"][0]
+    exe.tap(first["eid"])
+    exe.tap("e99")                            # not on screen -> UNKNOWN_ELEMENT is logged (a retry)
+    label = exe.get_screen()["elements"][0].get("label") or exe.get_screen()["elements"][0].get("text")
+    exe.assert_visible(label)
+    exe.end_test("pass", "ok")
+    steps = results(exe)["TC01"]["steps"]
+    assert steps[0]["action"] == "tap" and steps[0]["locator"] in ("resource-id", "accessibility-id", "text", "coordinates")
+    assert steps[0]["target"] == (first.get("label") or first.get("text") or first.get("desc"))
+    assert any(not s["ok"] and s.get("error") for s in steps)
+    assert steps[-1]["action"] == "assert" and steps[-1]["visible"] and steps[-1]["exact"]
+
+
+def test_history_keeps_every_verdict_across_reruns(exe):
+    approve(exe.runs_dir, "run1", CHAIN)
+    run_all(exe, {"TC01": "fail"})
+    run_all(exe, {"TC01": "fail"})
+    data = json.loads((exe.runs_dir / "run1" / "results.json").read_text())
+    assert [h["status"] for h in data["history"]["TC01"]] == ["fail", "fail"]
+    assert data["tests"]["TC01"]["started_at"] and data["tests"]["TC01"]["finished_at"]
