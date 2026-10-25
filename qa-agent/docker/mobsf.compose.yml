@@ -1,0 +1,21 @@
+# MobSF (open source, GPL-3.0, https://github.com/MobSF/Mobile-Security-Framework-MobSF), run unmodified.
+# Static APK scan for the Intake agent. From the qa-agent folder:
+#   docker compose --env-file .env -f docker/mobsf.compose.yml up -d
+#   docker compose --env-file .env -f docker/mobsf.compose.yml down
+# Credentials come from .env (git-ignored); the default mobsf/mobsf account is never created.
+services:
+  mobsf:
+    image: opensecurity/mobile-security-framework-mobsf:v4.5.3
+    container_name: sichakra-mobsf
+    ports:
+      - "127.0.0.1:8000:8000"   # local only; on a server put a TLS reverse proxy in front instead
+    environment:
+      MOBSF_API_KEY: ${MOBSF_API_KEY:?set MOBSF_API_KEY in .env}
+      DJANGO_SUPERUSER_USERNAME: ${MOBSF_ADMIN_USER:-sichakra}
+      DJANGO_SUPERUSER_PASSWORD: ${MOBSF_ADMIN_PASSWORD:?set MOBSF_ADMIN_PASSWORD in .env}
+    volumes:
+      - mobsf_data:/home/mobsf/.MobSF
+    restart: unless-stopped
+
+volumes:
+  mobsf_data:
