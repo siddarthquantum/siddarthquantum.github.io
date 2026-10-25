@@ -361,7 +361,7 @@ CHAIN = [{"id": "TC01"}, {"id": "TC02"}, {"id": "TC03", "fresh_start": False}, {
 
 
 def run_all(exe, statuses, select="all"):
-    r = exe.begin_execution("run1", select)
+    r = exe.begin_execution("run1", select, rerun=True)  # these tests deliberately re-run
     for tid in r["selected"]:
         assert exe.begin_test(tid)["ok"]
         exe.screenshot("step")
@@ -497,3 +497,34 @@ def test_begin_execution_returns_verified_test_content(exe):
     approve(exe.runs_dir, "run1", [{"id": "TC01", "title": "t", "steps": [{"action": "back"}]}])
     r = exe.begin_execution("run1")
     assert r["tests"][0]["steps"] == [{"action": "back"}]
+
+
+# ---------- 25 Oct optimisation: server-side evidence, screen in results, re-run guard ----------
+def test_actions_save_evidence_and_return_the_new_screen(exe):
+    approve(exe.runs_dir, "run1", CHAIN)
+    exe.begin_execution("run1")
+    start = exe.begin_test("TC01")
+    assert start["screen"]["elements"]  # step 1 needs no get_screen
+    eid = start["screen"]["elements"][0]["eid"]
+    r = exe.tap(eid)
+    assert r["screenshot"].endswith("_s01_tap.png") and r["screen"]["elements"]
+    a = exe.assert_visible("No such text anywhere")
+    assert a["visible"] is False and a["screenshot"].endswith("_s02_assert_fail.png") and "screen" not in a
+    exe.end_test("fail", "not visible")
+    assert len(results(exe)["TC01"]["evidence"]) == 2
+
+
+def test_explore_mode_saves_no_automatic_evidence(dev):
+    dev.launch_app()
+    eid = dev.get_screen()["elements"][0]["eid"]
+    r = dev.tap(eid)
+    assert "screenshot" not in r and "screen" not in r
+
+
+def test_rerun_needs_explicit_flag(exe):
+    approve(exe.runs_dir, "run1", CHAIN)
+    run_all(exe, {})
+    r = exe.begin_execution("run1")  # e.g. a follow-up chat message reaching the executor
+    assert r["error"] == "ALREADY_EXECUTED" and r["results"]["TC01"] == "pass"
+    assert results(exe)["TC01"]["status"] == "pass"  # nothing was wiped
+    assert exe.begin_execution("run1", rerun=True)["ok"]

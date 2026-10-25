@@ -24,6 +24,12 @@ Never invent screens, buttons or messages that were not observed.
 - Max 12 steps per test (device step limit is 25 actions incl. retries).
 - To check a checkbox state, assert on the text that only appears/enables when it changes, and
   describe the expected state in "expected".
+- An assert must be able to FAIL. Never assert_visible the text you just tapped (tap "Switch" then
+  assert "Switch" passes even if nothing happened; the tool rejects it). Assert what appears only
+  because of the action: the next screen's title or an item that exists only there, or a dialog title.
+- Use only texts that are in the exploration map. The tool rejects targets never seen on a screen.
+- expected_result names the exact visible text that proves success, e.g. 'Dialog titled
+  "WiFi settings" is visible', not "navigated successfully".
 
 ## fresh_start
 - Default true: app restarted with cleared data, starts on home. Tests must not depend on each other.

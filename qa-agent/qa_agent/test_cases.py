@@ -63,6 +63,22 @@ class TestCase(BaseModel):
             raise ValueError(f"{self.id} has no assert_visible/assert_not_visible step")
         return self
 
+    @model_validator(mode="after")
+    def no_self_fulfilling_assert(self):
+        # tap "Switch" then assert_visible "Switch" passes even if the tap did nothing: the text was
+        # already on screen. The check must be something that appears only because of the action.
+        tapped = set()
+        for s in self.steps:
+            key = s.target.strip().lower()
+            if s.action == "assert_visible" and key in tapped:
+                raise ValueError(
+                    f"{self.id}: assert_visible '{s.target}' checks text that was already visible when it was "
+                    "tapped, so it cannot fail. Assert something that appears only after the action: the next "
+                    "screen's title or one of its items, a dialog title, or a dependent option becoming visible")
+            if s.action == "tap":
+                tapped.add(key)
+        return self
+
 
 class TestSuite(BaseModel):
     __test__ = False
@@ -92,7 +108,14 @@ def validate_suite(tests_json: str):
         return None, "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors())[:1500]
 
 
-def save_proposed_tests(tests_json: str) -> dict:
+def unseen_targets(suite: TestSuite, seen: set[str]) -> list[str]:
+    """Tap/assert_visible targets that never appeared on a real screen (case-insensitive)."""
+    known = {s.strip().lower() for s in seen}
+    return sorted({s.target for t in suite.tests for s in t.steps
+                   if s.action in ("tap", "assert_visible") and s.target.strip().lower() not in known})
+
+
+def save_proposed_tests(tests_json: str, tool_context=None) -> dict:
     """Save the designed manual test cases for human review.
 
     Args:
@@ -101,12 +124,24 @@ def save_proposed_tests(tests_json: str) -> dict:
         assert_not_visible", "target", "value", "expected"}], "expected_result"}.
 
     Returns:
-      {"ok": true, "run_id", "path", "count"} or {"ok": false, "error": "INVALID_TESTS", "message"} -
-      fix the listed problems and call again.
+      {"ok": true, "run_id", "path", "count"} or {"ok": false, "error": "INVALID_TESTS" | "NO_EXPLORATION" |
+      "UNSEEN_TARGET", "message"} - fix the listed problems and call again. NO_EXPLORATION means the
+      device was never read: do not invent tests, tell the user exploration failed.
     """
     suite, err = validate_suite(tests_json)
     if err:
         return {"ok": False, "error": "INVALID_TESTS", "message": err}
+    if tool_context is not None:  # called by the agent: tests must come from what was really on screen
+        seen = set(tool_context.state.get("seen_texts") or [])
+        if not seen:
+            return {"ok": False, "error": "NO_EXPLORATION",
+                    "message": "No screen was read from the device in this session, so there is nothing real to "
+                               "test. Do not invent test cases. Tell the user exploration failed and why."}
+        missing = unseen_targets(suite, seen)
+        if missing:
+            return {"ok": False, "error": "UNSEEN_TARGET",
+                    "message": f"These targets never appeared on a screen during exploration: {missing}. Use only "
+                               "texts from the exploration map, or drop those steps."}
     run_id = f"{os.getenv('QA_PROFILE', 'app')}-{time.strftime('%Y%m%d-%H%M%S')}"
     run_dir = RUNS / run_id
     run_dir.mkdir(parents=True, exist_ok=True)

@@ -13,3 +13,5 @@ __pycache__/
 # IDE
 .idea/
 .vscode/
+# adk web chat sessions and state (local only)
+.adk/

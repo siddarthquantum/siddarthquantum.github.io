@@ -21,7 +21,7 @@ from google.adk.tools.skill_toolset import SkillDiscoveryMode, SkillToolset
 from google.genai import types
 from mcp import StdioServerParameters
 
-from qa_agent.callbacks import pace_model_calls, track_screens
+from qa_agent.callbacks import count_usage, pace_model_calls, quota_error, track_screens
 from qa_agent.test_cases import save_proposed_tests
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,10 +41,13 @@ CLICK_RULE = ("CLICK-ONLY MODE: do not type text; use only tap, scroll, back and
               if CLICK_ONLY else "")
 
 
-def model():
-    # Retry 429 / 5xx with backoff instead of failing the demo (R4).
-    return Gemini(model=MODEL_ID, retry_options=types.HttpRetryOptions(
-        attempts=4, initial_delay=10, max_delay=60, http_status_codes=[429, 500, 503]))
+def model(role: str = ""):
+    # Optional per-role model (Step 0 option c): QA_MODEL_EXPLORE / _DESIGN / _EXECUTE, else QA_MODEL.
+    model_id = os.getenv(f"QA_MODEL_{role.upper()}") if role else None
+    # Short retry for transient 5xx only. 429 is NOT retried: quota_error turns it into a clear message,
+    # because a daily limit never clears within a retry window.
+    return Gemini(model=model_id or MODEL_ID, retry_options=types.HttpRetryOptions(
+        attempts=3, initial_delay=2, max_delay=10, http_status_codes=[500, 503]))
 
 
 def device_tools(execute: bool, tool_filter: list[str]):
@@ -65,11 +68,13 @@ def skills(*names):
     return SkillToolset([SKILLS[n] for n in names], discovery_mode=SkillDiscoveryMode.EAGER)
 
 
-COMMON = dict(before_model_callback=pace_model_calls, after_tool_callback=track_screens)
+MODEL_CALLBACKS = dict(before_model_callback=pace_model_calls, after_model_callback=count_usage,
+                       on_model_error_callback=quota_error)
+COMMON = dict(after_tool_callback=track_screens, **MODEL_CALLBACKS)
 
 explorer = LlmAgent(
     name="explorer",
-    model=model(),
+    model=model("explore"),
     description="Explores the Android app on the device and writes an exploration map.",
     instruction=CLICK_RULE + f"""You are a mobile QA explorer. Explore the app under test through the device tools.
 
@@ -80,6 +85,9 @@ explorer = LlmAgent(
 3. If get_screen says few_elements, take ONE screenshot; you will be shown the image.
 4. Login/password/OTP screens: load the login-tests skill first.
 5. You have about 25 device actions. Stop exploring before running out.
+6. If launch_app or get_screen returns ok:false (no session, driver or device error), STOP at once. Your
+   final answer is then only: "EXPLORATION FAILED: <error code and message>". Never describe screens you
+   did not read with get_screen.
 
 Final answer = the EXPLORATION MAP (plain text, no eids, max ~40 lines):
 - Goal: <the user's goal>
@@ -94,7 +102,7 @@ Final answer = the EXPLORATION MAP (plain text, no eids, max ~40 lines):
 
 test_designer = LlmAgent(
     name="test_designer",
-    model=model(),
+    model=model("design"),
     description="Designs manual test cases from the exploration map and saves them for human approval.",
     instruction=CLICK_RULE + f"Design at most {MAX_TESTS} test cases. " + """You are a senior QA test designer. Load the test-design skill first and follow it.
 If the map contains login, password or OTP fields, also load the login-tests skill.
@@ -102,6 +110,8 @@ If the map contains login, password or OTP fields, also load the login-tests ski
 Exploration map from the explorer:
 {exploration}
 
+If the map starts with "EXPLORATION FAILED", do not design anything: tell the user exploration failed,
+quote the error, and suggest checking that Appium and the emulator are running.
 Design the test cases from this map only, save them with save_proposed_tests, then show the user a
 short table (id, title, priority, fresh_start) and the exact approval command from the tool result.
 Say clearly that NOTHING runs on the device until a human approves.""",
@@ -118,33 +128,39 @@ explore_and_design_agent = SequentialAgent(
 
 executor_agent = LlmAgent(
     name="executor_agent",
-    model=model(),
+    model=model("execute"),
     description="Executes HUMAN-APPROVED test cases on the device and records evidence.",
     instruction="""You are the test executor. Load the evidence skill first and follow it exactly.
 
-Run id: {run_id?}   Selection: {select?}
-1. begin_execution(run_id, select). If it fails (NOT_APPROVED, APPROVAL_INVALID, NOTHING_TO_RUN), stop
-   and explain to the user what to do (approval command: python scripts/approve.py <run_id>).
-2. It returns the approved tests. Run each selected test in order: begin_test, the steps with one
-   screenshot per step, end_test.
+Run id: {run_id?}   Selection: {select?}   Re-run explicitly requested: {rerun?}
+0. If the latest user message is not a request to run or re-run tests (a question, a thank-you, ...),
+   do NOT call begin_execution: transfer to qa_coordinator.
+1. begin_execution(run_id, select, rerun). If it fails (NOT_APPROVED, APPROVAL_INVALID, NOTHING_TO_RUN),
+   stop and explain to the user what to do (approval command: python scripts/approve.py <run_id>).
+   ALREADY_EXECUTED: show the existing results and ask whether to run again; do not retry by yourself.
+2. It returns the approved tests. Run each selected test in order: begin_test, the steps, end_test.
+   The server saves a screenshot after every step and returns the new screen with each action.
 3. Finish with the summary table.""",
-    tools=[device_tools(True, ["begin_execution", "begin_test", "end_test"] + ACTIONS),
+    tools=[device_tools(True, ["begin_execution", "begin_test", "end_test"] +
+                        [a for a in ACTIONS if a != "screenshot"]),
            skills("evidence")],
     include_contents="none",  # only this turn: keeps the explorer's long history out of every call (R4)
     **COMMON,
 )
 
 
-def set_execution_request(run_id: str, select: str, tool_context: ToolContext) -> dict:
+def set_execution_request(run_id: str, select: str, rerun: bool, tool_context: ToolContext) -> dict:
     """Record which approved run to execute, before transferring to executor_agent.
 
     Args:
       run_id: The run id the human approved, e.g. apidemos-20261025-101500.
       select: "all", "failed", or test ids like "TC02,TC05".
+      rerun: true only if the user explicitly said run again / re-run (overwrites existing results).
     """
     tool_context.state["run_id"] = run_id.strip()
     tool_context.state["select"] = (select or "all").strip()
-    return {"ok": True, "run_id": run_id, "select": select}
+    tool_context.state["rerun"] = bool(rerun)
+    return {"ok": True, "run_id": run_id, "select": select, "rerun": bool(rerun)}
 
 
 root_agent = LlmAgent(
@@ -156,11 +172,12 @@ root_agent = LlmAgent(
 - User wants to explore the app and/or design test cases -> transfer to explore_and_design_agent.
 - User wants to run / execute / re-run tests -> they must give a run id that a human approved with
   scripts/approve.py. Ask for it if missing. Selection is "all" unless they say "failed" or list ids.
-  Call set_execution_request(run_id, select), then transfer to executor_agent.
+  rerun=true only if they explicitly say run again / re-run / repeat.
+  Call set_execution_request(run_id, select, rerun), then transfer to executor_agent.
 - Never claim tests were approved or executed yourself. Approval is a human step outside this chat:
   python scripts/approve.py <run_id>   (add --plant-defects for the M5 planted-defect check)
 - Otherwise briefly explain these two options.""",
     tools=[set_execution_request],
     sub_agents=[explore_and_design_agent, executor_agent],
-    before_model_callback=pace_model_calls,
+    **MODEL_CALLBACKS,
 )

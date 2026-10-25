@@ -104,7 +104,7 @@ def test_vision_fallback_only_after_few_elements(tmp_path):
 def test_pacing_waits_between_model_calls(monkeypatch):
     import anyio
     import time
-    monkeypatch.setattr(callbacks, "MIN_GAP", 0.3)
+    monkeypatch.setenv("QA_MIN_TURN_SECONDS", "0.3")
     ctx, req = SimpleNamespace(state={}), SimpleNamespace(contents=[])
 
     async def two_calls():
@@ -134,5 +134,141 @@ def test_agent_tree_follows_review_r2():
 def test_set_execution_request_stores_state():
     from qa_agent.agent import set_execution_request
     ctx = SimpleNamespace(state={})
-    set_execution_request(" apidemos-1 ", "", ctx)
-    assert ctx.state == {"run_id": "apidemos-1", "select": "all"}
+    set_execution_request(" apidemos-1 ", "", False, ctx)
+    assert ctx.state == {"run_id": "apidemos-1", "select": "all", "rerun": False}
+
+
+# ---------- Step 0: quota fail-fast and usage counter (M7) ----------
+def quota_429(quota_id):
+    from google.genai import errors
+    return errors.APIError(429, {"error": {
+        "code": 429, "status": "RESOURCE_EXHAUSTED", "message": "Quota exceeded",
+        "details": [{"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                     "violations": [{"quotaId": quota_id}]}]}})
+
+
+@pytest.fixture
+def no_daily_block(monkeypatch):
+    monkeypatch.setattr(callbacks, "_daily_block", None)
+
+
+def text_of(resp):
+    return resp.content.parts[0].text
+
+
+def test_daily_quota_fails_fast_and_blocks_later_calls(no_daily_block):
+    import asyncio
+    req = SimpleNamespace(model="gemini-3.8-flash", contents=[])
+    err = quota_429("GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+    resp = callbacks.quota_error(None, req, err)
+    assert "QUOTA_DAILY" in text_of(resp) and "gemini-3.8-flash" in text_of(resp)
+    # the next agent in the chain gets the same message without calling the API
+    ctx = SimpleNamespace(state={})
+    again = asyncio.run(callbacks.pace_model_calls(ctx, req))
+    assert again is not None and "QUOTA_DAILY" in text_of(again)
+
+
+def test_minute_quota_explains_wait_and_does_not_block(no_daily_block):
+    req = SimpleNamespace(model="gemini-3.8-flash", contents=[])
+    resp = callbacks.quota_error(None, req, quota_429("GenerateRequestsPerMinutePerProjectPerModel-FreeTier"))
+    assert "QUOTA_MINUTE" in text_of(resp)
+    assert callbacks._daily_block is None
+
+
+def test_other_errors_are_not_swallowed(no_daily_block):
+    from google.genai import errors
+    req = SimpleNamespace(model="m", contents=[])
+    assert callbacks.quota_error(None, req, errors.APIError(500, {"error": {"code": 500}})) is None
+    assert callbacks.quota_error(None, req, ValueError("boom")) is None
+
+
+def test_usage_counter_adds_up_per_agent_and_logs(tmp_path, monkeypatch):
+    from google.genai import types
+    monkeypatch.setattr(callbacks, "USAGE_DIR", tmp_path)
+    ctx = SimpleNamespace(state={}, agent_name="explorer", session=SimpleNamespace(id="s1"))
+
+    def resp(p, o):
+        return SimpleNamespace(partial=False, model_version="gemini-x", usage_metadata=types.GenerateContentResponseUsageMetadata(
+            prompt_token_count=p, candidates_token_count=o, total_token_count=p + o))
+
+    callbacks.count_usage(ctx, resp(1000, 50))
+    callbacks.count_usage(ctx, resp(1200, 30))
+    ctx.agent_name = "test_designer"
+    callbacks.count_usage(ctx, resp(900, 400))
+    u = ctx.state["usage"]
+    assert u["requests"] == 3 and u["total"] == 3580
+    assert u["by_agent"]["explorer"] == {"requests": 2, "total": 2280}
+    lines = (tmp_path / "s1.jsonl").read_text().splitlines()
+    assert len(lines) == 3 and json.loads(lines[2])["agent"] == "test_designer"
+
+
+def test_usage_counter_skips_partial_chunks(tmp_path, monkeypatch):
+    monkeypatch.setattr(callbacks, "USAGE_DIR", tmp_path)
+    ctx = SimpleNamespace(state={}, agent_name="explorer", session=SimpleNamespace(id="s1"))
+    callbacks.count_usage(ctx, SimpleNamespace(partial=True, usage_metadata=object()))
+    assert "usage" not in ctx.state
+
+
+def test_all_agents_fail_fast_on_quota_and_count_usage():
+    from qa_agent import agent
+    for a in (agent.root_agent, agent.explorer, agent.test_designer, agent.executor_agent):
+        assert a.on_model_error_callback is callbacks.quota_error
+        assert a.after_model_callback is callbacks.count_usage
+        assert 429 not in a.model.retry_options.http_status_codes
+
+
+def test_per_role_model_override(monkeypatch):
+    from qa_agent import agent
+    monkeypatch.setenv("QA_MODEL_EXPLORE", "gemini-3.1-flash-lite")
+    assert agent.model("explore").model == "gemini-3.1-flash-lite"
+    monkeypatch.delenv("QA_MODEL_DESIGN", raising=False)
+    assert agent.model("design").model == agent.MODEL_ID
+
+
+def test_pacing_reads_env_at_call_time(monkeypatch):
+    # agent.py imports callbacks before load_dotenv(); the gap must still follow .env
+    monkeypatch.setenv("QA_MIN_TURN_SECONDS", "5")
+    assert callbacks.min_gap() == 5.0
+
+
+# ---------- no invented tests, no assertions that cannot fail (Step 5 fix, 25 Oct) ----------
+def test_assert_on_just_tapped_text_is_rejected():
+    steps = [{"action": "tap", "target": "Preference"}, {"action": "tap", "target": "Switch"},
+             {"action": "assert_visible", "target": "Switch"}]
+    assert "cannot fail" in validate_suite(json.dumps([tc(steps=steps)]))[1]
+
+
+def test_assert_on_next_screen_text_is_fine():
+    steps = [{"action": "tap", "target": "Preference"},
+             {"action": "assert_visible", "target": "3. Preference dependencies"}]
+    assert validate_suite(json.dumps([tc(steps=steps)]))[1] is None
+
+
+def test_track_screens_records_seen_texts():
+    state = {}
+    resp = {"content": [{"type": "text", "text": json.dumps({"ok": True, "elements": [
+        {"eid": "e01", "text": "Preference", "label": "Preference"}, {"eid": "e02", "desc": "Navigate up"}]})}]}
+    callbacks.track_screens(SimpleNamespace(name="get_screen"), {}, SimpleNamespace(state=state), resp)
+    assert state["seen_texts"] == ["Navigate up", "Preference"]
+
+
+def save_with(seen, steps):
+    from qa_agent.test_cases import save_proposed_tests
+    return save_proposed_tests(json.dumps([tc(steps=steps)]), tool_context=SimpleNamespace(state={"seen_texts": seen}))
+
+
+def test_save_refuses_without_exploration():
+    assert save_with([], tc()["steps"])["error"] == "NO_EXPLORATION"
+
+
+def test_save_refuses_invented_targets():
+    r = save_with(["Preference"], [{"action": "tap", "target": "Preference"},
+                                   {"action": "assert_visible", "target": "9. Switch"}])
+    assert r["error"] == "UNSEEN_TARGET" and "9. Switch" in r["message"]
+
+
+def test_save_accepts_seen_targets(tmp_path, monkeypatch):
+    from qa_agent import test_cases
+    monkeypatch.setattr(test_cases, "RUNS", tmp_path)
+    r = save_with(["Preference", "3. Preference dependencies"], tc()["steps"])
+    assert r["ok"] and (tmp_path / r["run_id"] / "proposed_tests.json").exists()

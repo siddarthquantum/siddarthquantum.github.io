@@ -174,14 +174,28 @@ class Device:
         found = self.driver.find_elements(by[locator["by"]], locator["value"])
         return found[0] if found else None
 
-    def _after_action(self, result):
-        """Mark the screen stale and report if the action left the app."""
+    def _after_action(self, result, action: str = ""):
+        """Mark the screen stale, report if the action left the app, and save step evidence."""
         self.stale = True
         pkg = self._foreground()
         if pkg != self.app_package:
             result["left_app"] = True
             result["foreground"] = pkg
         result["steps_used"] = self.steps
+        return self._auto_evidence(result, action, with_screen=True)
+
+    def _auto_evidence(self, result, action: str, with_screen: bool = False):
+        """Execute mode, inside a test: every step leaves a masked screenshot (FR-14), saved by the server so
+        evidence never depends on the model asking for it. After an action the new screen is attached too,
+        so the next step needs no separate get_screen call (about 3 model calls per step -> 1)."""
+        if self.mode == "execute" and self.current_test and action:
+            shot = self.screenshot(f"{self.current_test}_s{self.shot_no + 1:02d}_{action}")
+            if shot.get("ok"):
+                result["screenshot"] = shot["path"]
+            if with_screen and not result.get("left_app"):
+                screen = self.get_screen()
+                if screen.get("ok"):
+                    result["screen"] = {"activity": screen["activity"], "elements": screen["elements"]}
         return result
 
     def _guarded(self, eid=None, count=True):
@@ -214,7 +228,7 @@ class Device:
                                         encoding="utf-8")
 
     @safe
-    def begin_execution(self, run_id: str, select: str = "all"):
+    def begin_execution(self, run_id: str, select: str = "all", rerun: bool = False):
         if self.mode != "execute":
             return fail("WRONG_MODE", "begin_execution is only available when the server runs with --execute.")
         tests, err = load_approved(self.runs_dir, run_id)
@@ -224,6 +238,15 @@ class Device:
         ids, added, err = select_tests(tests, select, previous)
         if err:
             return fail(*err)
+        wiping = [tid for tid in (previous if (select or "all").strip().lower() == "all" else ids) if tid in previous]
+        if wiping and not rerun:
+            # A follow-up chat message reaches the executor directly; without this it silently re-ran
+            # everything and overwrote finished results (seen 25 Oct).
+            summary = {tid: previous[tid].get("status") for tid in previous}
+            return {"ok": False, "error": "ALREADY_EXECUTED",
+                    "message": f"{run_id} already has results {summary}. Re-running overwrites them. Call again "
+                               "with rerun=true ONLY if the user explicitly asked to run again.",
+                    "results": summary}
         # Overwrite: "all" wipes every old result; a subset wipes only the re-run tests' results and
         # evidence, so the report still has the latest result of every test.
         evidence = self.runs_dir / run_id / "evidence"
@@ -268,6 +291,9 @@ class Device:
         self.current_test = test_id
         self.run_dir = self.runs_dir / self.run_id / "evidence" / test_id
         self.shot_no, self.evidence = 0, []
+        screen = self.get_screen()  # starting screen, so step 1 needs no get_screen call
+        if screen.get("ok"):
+            result["screen"] = {"activity": screen["activity"], "elements": screen["elements"]}
         return result
 
     @safe
@@ -365,7 +391,7 @@ class Device:
             return fail("ELEMENT_NOT_FOUND", f"{eid} is no longer on screen. Call get_screen.")
         el.click()
         time.sleep(0.5)  # let the transition start before the next page_source
-        return self._after_action({"ok": True, "tapped": eid})
+        return self._after_action({"ok": True, "tapped": eid}, "tap")
 
     @safe
     def type_text(self, eid: str, text: str):
@@ -390,7 +416,7 @@ class Device:
             self.masked.add((locator["by"], locator["value"]))
         # No hide_keyboard(): on UiAutomator2 it can send BACK, which closes dialogs. The agent can
         # call press_back itself if the keyboard covers something.
-        result = self._after_action({"ok": True, "typed_into": eid, "text": text})
+        result = self._after_action({"ok": True, "typed_into": eid, "text": text}, "type")
         if not result.get("left_app"):
             self.stale = False  # typing does not change the screen, so the eids stay valid
         return result
@@ -410,7 +436,7 @@ class Device:
         more = self.driver.execute_script("mobile: scrollGesture", {
             "left": x1, "top": y1, "width": x2 - x1, "height": y2 - y1,
             "direction": direction, "percent": 0.7})
-        return self._after_action({"ok": True, "direction": direction, "can_scroll_more": bool(more)})
+        return self._after_action({"ok": True, "direction": direction, "can_scroll_more": bool(more)}, "scroll")
 
     @safe
     def press_back(self):
@@ -419,7 +445,7 @@ class Device:
             return err
         self.driver.back()
         time.sleep(0.5)
-        return self._after_action({"ok": True})
+        return self._after_action({"ok": True}, "back")
 
     @safe
     def assert_visible(self, text: str):
@@ -432,8 +458,9 @@ class Device:
         needle = text.lower()
         hits = [e for e in s["elements"]
                 if needle in " ".join([e.get("text", ""), e.get("desc", ""), e.get("label", "")]).lower()]
-        return {"ok": True, "text": text, "visible": bool(hits),
-                "matches": [e.get("text") or e.get("desc") or e.get("label") for e in hits[:5]]}
+        result = {"ok": True, "text": text, "visible": bool(hits),
+                  "matches": [e.get("text") or e.get("desc") or e.get("label") for e in hits[:5]]}
+        return self._auto_evidence(result, "assert" if hits else "assert_fail")
 
     @safe
     def screenshot(self, name: str = "step"):

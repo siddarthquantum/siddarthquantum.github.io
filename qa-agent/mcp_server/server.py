@@ -39,11 +39,12 @@ mcp = MCPServer(
 
 if MODE == "execute":  # Explorer never even sees these two tools
     @mcp.tool()
-    def begin_execution(run_id: str, select: str = "all") -> dict:
+    def begin_execution(run_id: str, select: str = "all", rerun: bool = False) -> dict:
         """Verify the human approval of runs/<run_id>/approved_tests.json and choose tests to run.
-        select: "all" (default, overwrites old results), "failed" (re-run tests not passed last time),
-        or ids like "TC02,TC05". Tests that depend on an earlier test are added automatically."""
-        return device.begin_execution(run_id, select)
+        select: "all" (default), "failed" (tests not passed last time), or ids like "TC02,TC05".
+        Tests that depend on an earlier test are added automatically. rerun=true is required to overwrite
+        existing results; use it ONLY when the user explicitly asked to run again (else ALREADY_EXECUTED)."""
+        return device.begin_execution(run_id, select, rerun)
 
     @mcp.tool()
     def begin_test(test_id: str) -> dict:
@@ -77,7 +78,8 @@ def get_screen() -> dict:
 
 @mcp.tool()
 def tap(eid: str) -> dict:
-    """Tap the element with this eid from the latest get_screen."""
+    """Tap the element with this eid from the latest get_screen. During a test the server saves the step
+    screenshot itself and returns its path."""
     return device.tap(eid)
 
 
